@@ -1,0 +1,57 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String       @id @default(cuid())
+  firebaseUid String       @unique
+  email       String       @unique
+  fullName    String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  apiKeys     ApiKey[]
+  AppliedJob  AppliedJob[]
+
+  @@index([firebaseUid])
+  @@index([email])
+}
+
+model ApiKey {
+  id         String    @id @default(cuid())
+  key        String    @unique
+  name       String
+  userId     String
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+  isActive   Boolean   @default(true)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([key])
+  @@index([userId])
+  @@index([isActive])
+}
+
+model AppliedJob {
+  id          String   @id
+  userId      String
+  title       String
+  company     String?
+  location    String?
+  url         String
+  appliedDate DateTime @default(now())
+  appliedText String?
+  status      String   @default("Applied")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+  User        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, url])
+  @@index([status])
+  @@index([userId])
+}
