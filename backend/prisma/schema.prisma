@@ -17,6 +17,7 @@ model User {
   updatedAt   DateTime     @updatedAt
   apiKeys     ApiKey[]
   AppliedJob  AppliedJob[]
+  Progress    Progress?
 
   @@index([firebaseUid])
   @@index([email])
@@ -55,4 +56,16 @@ model AppliedJob {
   @@index([status])
   @@index([userId])
   @@index([type])
+}
+
+model Progress {
+  id          String   @id @default(cuid())
+  userId      String
+  weeks       Json     // Store the weeks array as JSON
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  User        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@unique([userId]) // One progress record per user
 }

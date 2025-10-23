@@ -1,16 +1,12 @@
 // src/lib/progress.ts
-import { db } from "@/lib/firebase";
-import {
-  doc, getDoc, setDoc, updateDoc, onSnapshot,
-  serverTimestamp, Timestamp
-} from "firebase/firestore";
+import { auth } from "@/lib/firebase";
 
 export type WeekItem = {
   week: number;
   title: string;
   description: string;
   done: boolean;
-  completedAt: Timestamp | null;
+  completedAt: string | null;
   notes: string;
   color: string;
 };
@@ -90,71 +86,97 @@ export const DEFAULT_WEEKS: WeekItem[] = [
   },
 ];
 
-export async function initUserProgressIfMissing(uid: string) {
-  const ref = doc(db, `users/${uid}/progress/default`);
-  const snap = await getDoc(ref);
+// API base URL - adjust based on your backend URL
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+
+async function getAuthHeaders() {
+  const user = auth.currentUser;
+  if (!user) throw new Error('User not authenticated');
   
-  if (!snap.exists()) {
-    await setDoc(ref, {
-      weeks: DEFAULT_WEEKS,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-  } else {
-    const existingWeeks = snap.data().weeks as WeekItem[];
-    
-    // Update if structure changed
-    if (existingWeeks.length !== DEFAULT_WEEKS.length || 
-        existingWeeks[0]?.title !== DEFAULT_WEEKS[0]?.title) {
-      
-      const updatedWeeks = DEFAULT_WEEKS.map((newWeek) => {
-        const existingWeek = existingWeeks.find(w => w.week === newWeek.week);
-        return existingWeek ? { 
-          ...newWeek, 
-          done: existingWeek.done,
-          completedAt: existingWeek.completedAt,
-          notes: existingWeek.notes
-        } : newWeek;
-      });
-      
-      await updateDoc(ref, {
-        weeks: updatedWeeks,
-        updatedAt: serverTimestamp(),
-      });
-    }
+  return {
+    'x-user-id': user.uid,
+    'Content-Type': 'application/json'
+  };
+}
+
+export async function initUserProgressIfMissing(uid: string) {
+  // This is now handled automatically by the API when getting progress
+  // The API will create default progress if it doesn't exist
+  return await getUserProgress();
+}
+
+export async function getUserProgress(): Promise<WeekItem[]> {
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_BASE_URL}/progress`, {
+    method: 'GET',
+    headers
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to get user progress');
   }
+
+  const data = await response.json();
+  return data.weeks;
 }
 
 export function onUserProgress(uid: string, cb: (weeks: WeekItem[] | null) => void) {
-  const ref = doc(db, `users/${uid}/progress/default`);
-  return onSnapshot(ref, (snap) => {
-    if (snap.exists()) cb(snap.data().weeks as WeekItem[]);
-    else cb(null);
-  });
+  // For now, we'll use polling instead of real-time updates
+  // This can be enhanced later with WebSockets or Server-Sent Events
+  let intervalId: NodeJS.Timeout;
+  
+  const poll = async () => {
+    try {
+      const weeks = await getUserProgress();
+      cb(weeks);
+    } catch (error) {
+      console.error('Error polling progress:', error);
+      cb(null);
+    }
+  };
+
+  // Initial fetch
+  poll();
+  
+  // Poll every 5 seconds
+  intervalId = setInterval(poll, 5000);
+
+  // Return cleanup function
+  return () => {
+    if (intervalId) {
+      clearInterval(intervalId);
+    }
+  };
 }
 
 export async function updateWeekDone(uid: string, index: number, nextDone: boolean) {
-  const ref = doc(db, `users/${uid}/progress/default`);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) throw new Error("Progress doc missing");
-  
-  const weeks = snap.data().weeks as WeekItem[];
-  const updated = weeks.map((w, i) =>
-    i === index
-      ? { ...w, done: nextDone, completedAt: nextDone ? new Date() : null }
-      : w
-  );
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_BASE_URL}/progress/week/${index}/done`, {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify({ done: nextDone })
+  });
 
-  await updateDoc(ref, { weeks: updated, updatedAt: serverTimestamp() });
+  if (!response.ok) {
+    throw new Error('Failed to update week status');
+  }
+
+  const data = await response.json();
+  return data.weeks;
 }
 
 export async function updateWeekNotes(uid: string, index: number, notes: string) {
-  const ref = doc(db, `users/${uid}/progress/default`);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) throw new Error("Progress doc missing");
-  
-  const weeks = snap.data().weeks as WeekItem[];
-  const updated = weeks.map((w, i) => (i === index ? { ...w, notes } : w));
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_BASE_URL}/progress/week/${index}/notes`, {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify({ notes })
+  });
 
-  await updateDoc(ref, { weeks: updated, updatedAt: serverTimestamp() });
+  if (!response.ok) {
+    throw new Error('Failed to update week notes');
+  }
+
+  const data = await response.json();
+  return data.weeks;
 }

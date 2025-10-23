@@ -1,6 +1,4 @@
 import { useUserProgress } from "@/hooks/useUserProgress";
-import { auth } from "@/lib/firebase";
-import { initUserProgressIfMissing } from "@/lib/progress";
 import { useState } from "react";
 import { CheckCircle, Circle, Edit3, Save, X, Calendar, Clock } from "lucide-react";
 
@@ -18,28 +16,17 @@ export default function ProgressBoard() {
     );
   }
 
-  // If no doc yet, show a button to create it now
+  // If no weeks data yet, show loading or create message
   if (!weeks) {
-    async function createNow() {
-      const u = auth.currentUser;
-      if (!u) return;
-      await initUserProgressIfMissing(u.uid);
-      // after write, the live subscription will populate weeks automatically
-    }
     return (
       <div className="max-w-md mx-auto">
         <div className="bg-white rounded-xl border border-gray-200 p-8 text-center shadow-sm">
           <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Calendar className="w-8 h-8 text-blue-600" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">No Progress Found</h3>
-          <p className="text-gray-600 mb-6">Start tracking your 8-week interview journey</p>
-          <button
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg"
-            onClick={createNow}
-          >
-            Create My 8-Week Tracker
-          </button>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Setting up your progress tracker...</h3>
+          <p className="text-gray-600 mb-6">Initializing your 8-week interview journey</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
         </div>
       </div>
     );

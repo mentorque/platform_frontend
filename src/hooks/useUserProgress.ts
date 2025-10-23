@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { onUserProgress, updateWeekDone, updateWeekNotes } from "@/lib/progress";
+import { onUserProgress, updateWeekDone, updateWeekNotes, getUserProgress } from "@/lib/progress";
 import type { WeekItem } from "@/lib/progress";
 
 export function useUserProgress() {
@@ -16,36 +16,53 @@ export function useUserProgress() {
   }, []);
 
   useEffect(() => {
-    if (!uid) { setWeeks(null); setLoading(false); return; }
+    if (!uid) { 
+      setWeeks(null); 
+      setLoading(false); 
+      return; 
+    }
+    
     setLoading(true);
-    const stop = onUserProgress(uid, (w) => { setWeeks(w); setLoading(false); });
+    const stop = onUserProgress(uid, (w) => { 
+      setWeeks(w); 
+      setLoading(false); 
+    });
     return () => stop();
   }, [uid]);
 
   async function toggle(index: number, nextDone: boolean) {
     if (!uid || weeks == null) return;
-    // optimistic UI
+    
+    // Optimistic UI update
     const prev = weeks;
-    const local = weeks.map((w, i) => (i === index ? { ...w, done: nextDone } : w));
+    const local = weeks.map((w, i) => (i === index ? { ...w, done: nextDone, completedAt: nextDone ? new Date().toISOString() : null } : w));
     setWeeks(local);
+    
     try {
-      await updateWeekDone(uid, index, nextDone);
+      const updatedWeeks = await updateWeekDone(uid, index, nextDone);
+      setWeeks(updatedWeeks);
     } catch (e) {
-      // revert on failure
+      // Revert on failure
       setWeeks(prev);
+      console.error("Could not save:", e);
       alert("Could not save. Check console for details.");
     }
   }
 
   async function saveNotes(index: number, notes: string) {
     if (!uid || weeks == null) return;
+    
+    // Optimistic UI update
     const prev = weeks;
     const local = weeks.map((w, i) => (i === index ? { ...w, notes } : w));
     setWeeks(local);
+    
     try {
-      await updateWeekNotes(uid, index, notes);
+      const updatedWeeks = await updateWeekNotes(uid, index, notes);
+      setWeeks(updatedWeeks);
     } catch (e) {
       setWeeks(prev);
+      console.error("Could not save notes:", e);
       alert("Could not save notes. Check console for details.");
     }
   }

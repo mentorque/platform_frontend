@@ -86,11 +86,20 @@ app.get('/health', async (req, res) => {
   }
 });
 
+const progressRoutes = require('./src/routes/progressRoutes');
+console.log('Mounting progress routes on /progress');
+app.use('/progress', progressRoutes);
+
 const apiKeyRoutes = require('./src/routes/apiKeyRoutes');
 app.use('/api', apiKeyRoutes);
 
 const appliedJobRoutes = require('./src/routes/appliedJobRoutes');
 app.use('/api', appliedJobRoutes);
+
+// Test endpoint without any middleware
+app.get('/test-progress', (req, res) => {
+  res.json({ message: 'Progress test endpoint works', user: req.headers['x-user-id'] });
+});
 
 // ==================== Error Handling ====================
 
