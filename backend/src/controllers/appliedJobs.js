@@ -47,6 +47,7 @@ const getAppliedJobs = async (req, res) => {
     });
 
     console.log(`✅ Found ${jobs.length} jobs`);
+    console.log('📋 Jobs details:', jobs.map(job => ({ id: job.id, title: job.title, type: job.type, appliedDate: job.appliedDate })));
 
     res.json({ jobs });
   } catch (error) {
@@ -59,7 +60,7 @@ const getAppliedJobs = async (req, res) => {
 const createAppliedJob = async (req, res) => {
   try {
     const { uid, email } = req.user;
-    const { id, title, company, location, url, appliedText } = req.body;
+    const { id, title, company, location, url, appliedText, appliedDate, status, type } = req.body;
 
     // Get or create user in database
     const user = await getOrCreateUser(uid, email);
@@ -72,22 +73,7 @@ const createAppliedJob = async (req, res) => {
       });
     }
 
-    // Check if job already exists for this user
-    const existing = await prisma.appliedJob.findUnique({
-      where: {
-        userId_url: {
-          userId,
-          url
-        }
-      }
-    });
-
-    if (existing) {
-      return res.status(409).json({ 
-        error: 'You have already applied to this job',
-        job: existing
-      });
-    }
+    // Note: Removed duplicate URL check to allow manual entries with same URLs
 
     // Create the applied job
     const job = await prisma.appliedJob.create({
@@ -99,11 +85,14 @@ const createAppliedJob = async (req, res) => {
         location: location || null,
         url,
         appliedText: appliedText || null,
-        status: 'Applied',
+        appliedDate: appliedDate ? new Date(appliedDate) : new Date(),
+        status: status || 'Applied',
+        type: type || 'Website',
         updatedAt: new Date()
       }
     });
 
+    console.log('✅ Created job:', { id: job.id, title: job.title, type: job.type, userId: job.userId });
     res.status(201).json({ job });
   } catch (error) {
     console.error('Error creating applied job:', error);

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import { Briefcase, MapPin, ExternalLink, Trash2, Calendar, Building2, RefreshCw, FileText, Clock, Phone, XCircle, ChevronDown, Flame, Trophy, Target, Zap } from 'lucide-react';
+import { Briefcase, MapPin, ExternalLink, Trash2, Calendar, Building2, RefreshCw, FileText, Clock, Phone, XCircle, ChevronDown, Flame, Trophy, Target, Zap, Plus, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Protected from '@/components/Protected';
 import Navbar from '@/components/Navbar';
@@ -14,6 +14,7 @@ interface AppliedJob {
   appliedDate: string;
   appliedText?: string;
   status: string;
+  type?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -48,6 +49,16 @@ export default function AppliedJobs() {
   const [loading, setLoading] = useState(true);
   const [updatingJobId, setUpdatingJobId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('All');
+  const [showAddJobModal, setShowAddJobModal] = useState(false);
+  const [newJob, setNewJob] = useState({
+    title: '',
+    company: '',
+    appliedDate: new Date().toISOString().split('T')[0],
+    status: 'Applied',
+    type: 'Website',
+    url: ''
+  });
+  const [submitting, setSubmitting] = useState(false);
   const auth = getAuth();
 
   useEffect(() => {
@@ -163,6 +174,65 @@ export default function AppliedJobs() {
     }
   };
 
+  const handleAddJob = async () => {
+    if (!newJob.title.trim() || !newJob.url.trim()) {
+      toast.error('Title and Job Link are required');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) {
+        toast.error('Not authenticated');
+        setSubmitting(false);
+        return;
+      }
+
+      const jobData = {
+        id: `manual_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        title: newJob.title.trim(),
+        company: newJob.company.trim() || null,
+        url: newJob.url.trim(),
+        appliedDate: newJob.appliedDate,
+        status: newJob.status,
+        type: newJob.type
+      };
+
+      const response = await fetch(`${API_URL}/api/applied-jobs`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(jobData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to add job');
+      }
+
+      const data = await response.json();
+      setJobs([data.job, ...jobs]);
+      setShowAddJobModal(false);
+      setNewJob({
+        title: '',
+        company: '',
+        appliedDate: new Date().toISOString().split('T')[0],
+        status: 'Applied',
+        type: 'Website',
+        url: ''
+      });
+      toast.success('Job added successfully');
+    } catch (error: any) {
+      console.error('Error adding job:', error);
+      toast.error(error.message || 'Failed to add job');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const getStatusConfig = (status: string) => {
     return STATUS_OPTIONS.find(s => s.value === status) || STATUS_OPTIONS[0];
   };
@@ -220,6 +290,7 @@ export default function AppliedJobs() {
   };
 
   const streakData = calculateStreak();
+  
   const statusCounts = getStatusCounts();
 
   if (loading) {
@@ -236,10 +307,10 @@ export default function AppliedJobs() {
     <Protected>
       <Navbar />
       <div className="container mx-auto px-4 py-8 max-w-7xl">
-        {/* Streak Counter */}
+        {/* Streak & Activity Card */}
         <div className="mb-6 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg hover:shadow-xl transition-shadow duration-300 p-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-6 flex-wrap">
               {/* Current Streak */}
               <div className="flex items-center gap-3">
                 <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 rounded-xl shadow-md">
@@ -269,6 +340,24 @@ export default function AppliedJobs() {
                   </div>
                   <div className="text-sm font-semibold text-slate-600 dark:text-slate-400">
                     Today's Applications
+                  </div>
+                </div>
+              </div>
+
+              {/* Divider */}
+              <div className="h-16 w-px bg-slate-300 dark:bg-slate-600"></div>
+
+              {/* Total Applications */}
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-gradient-to-br from-slate-500 to-slate-600 dark:from-slate-600 dark:to-slate-700 rounded-xl shadow-md">
+                  <Briefcase className="w-8 h-8 text-white" />
+                </div>
+                <div>
+                  <div className="text-3xl font-bold text-slate-900 dark:text-slate-100">
+                    {jobs.length}
+                  </div>
+                  <div className="text-sm font-semibold text-slate-600 dark:text-slate-400">
+                    Total Applications
                   </div>
                 </div>
               </div>
@@ -320,6 +409,7 @@ export default function AppliedJobs() {
               ></div>
             </div>
           </div>
+
         </div>
 
         {/* Header */}
@@ -328,13 +418,22 @@ export default function AppliedJobs() {
             <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100">
               Applied Jobs
             </h1>
-            <button
-              onClick={() => fetchAppliedJobs()}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg transition-colors border border-gray-300 dark:border-gray-600"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Refresh
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowAddJobModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                Add Job Manually
+              </button>
+              <button
+                onClick={() => fetchAppliedJobs()}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg transition-colors border border-gray-300 dark:border-gray-600"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Refresh
+              </button>
+            </div>
           </div>
 
           {/* Stats Cards */}
@@ -391,7 +490,6 @@ export default function AppliedJobs() {
           <div className="space-y-4">
             {filteredJobs.map((job) => {
               const statusConfig = getStatusConfig(job.status);
-              const StatusIcon = statusConfig.icon;
               return (
                 <div
                   key={job.id}
@@ -420,6 +518,13 @@ export default function AppliedJobs() {
                                 <div className="flex items-center gap-1.5">
                                   <MapPin className="w-4 h-4 flex-shrink-0" />
                                   <span>{job.location}</span>
+                                </div>
+                              )}
+                              {job.type && (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-md text-xs font-medium">
+                                    {job.type}
+                                  </span>
                                 </div>
                               )}
                               <div className="flex items-center gap-1.5">
@@ -489,6 +594,144 @@ export default function AppliedJobs() {
           </div>
         )}
       </div>
+
+      {/* Add Job Modal */}
+      {showAddJobModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                  Add Job Manually
+                </h2>
+                <button
+                  onClick={() => setShowAddJobModal(false)}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={(e) => { e.preventDefault(); handleAddJob(); }} className="space-y-4">
+                {/* Job Title */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Job Title *
+                  </label>
+                  <input
+                    type="text"
+                    value={newJob.title}
+                    onChange={(e) => setNewJob({ ...newJob, title: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    placeholder="e.g. Software Engineer"
+                    required
+                  />
+                </div>
+
+                {/* Company */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Company
+                  </label>
+                  <input
+                    type="text"
+                    value={newJob.company}
+                    onChange={(e) => setNewJob({ ...newJob, company: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    placeholder="e.g. Google"
+                  />
+                </div>
+
+                {/* Applied Date */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Applied Date
+                  </label>
+                  <input
+                    type="date"
+                    value={newJob.appliedDate}
+                    onChange={(e) => setNewJob({ ...newJob, appliedDate: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  />
+                </div>
+
+                {/* Status */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Status
+                  </label>
+                  <select
+                    value={newJob.status}
+                    onChange={(e) => setNewJob({ ...newJob, status: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  >
+                    {STATUS_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.value}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Job Type */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Type
+                  </label>
+                  <select
+                    value={newJob.type}
+                    onChange={(e) => setNewJob({ ...newJob, type: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  >
+                    <option value="Website">Website</option>
+                    <option value="Referral">Referral</option>
+                  </select>
+                </div>
+
+                {/* Job Link */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Job Link *
+                  </label>
+                  <input
+                    type="url"
+                    value={newJob.url}
+                    onChange={(e) => setNewJob({ ...newJob, url: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    placeholder="https://company.com/job-posting"
+                    required
+                  />
+                </div>
+
+                {/* Form Actions */}
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddJobModal(false)}
+                    className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+                  >
+                    {submitting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Adding...
+                      </>
+                    ) : (
+                      'Add Job'
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </Protected>
   );
 }

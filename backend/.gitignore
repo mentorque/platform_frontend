@@ -1,5 +1,48 @@
-node_modules
-# Keep environment variables out of version control
-.env
+# Dependencies
+node_modules/
+package-lock.json
 
-/generated/prisma
+# Environment variables
+.env
+.env.local
+.env.production
+.env.development
+
+# Firebase
+firebase-service-account.json
+config/firebase-service-account.json
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+logs/
+
+# Build
+dist/
+build/
+
+# Prisma
+generated/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Testing
+coverage/
+.nyc_output/
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/

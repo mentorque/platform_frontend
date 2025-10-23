@@ -47,11 +47,12 @@ model AppliedJob {
   appliedDate DateTime @default(now())
   appliedText String?
   status      String   @default("Applied")
+  type        String   @default("Website")
   createdAt   DateTime @default(now())
   updatedAt   DateTime
   User        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, url])
   @@index([status])
   @@index([userId])
+  @@index([type])
 }
