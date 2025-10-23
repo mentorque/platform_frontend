@@ -87,7 +87,7 @@ export const DEFAULT_WEEKS: WeekItem[] = [
 ];
 
 // API base URL - adjust based on your backend URL
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://platformbackend-production.up.railway.app';
 
 async function getAuthHeaders() {
   const user = auth.currentUser;
