@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import { Briefcase, MapPin, ExternalLink, Trash2, Calendar, Building2, RefreshCw, FileText, Clock, Phone, XCircle, ChevronDown, Flame, Trophy, Target, Zap, Plus, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Briefcase, MapPin, ExternalLink, Trash2, Calendar, Building2, RefreshCw, FileText, Clock, Phone, XCircle, ChevronDown, Flame, Trophy, Target, Zap, Plus, X, ChevronLeft, ChevronRight, BarChart3, PieChart } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Protected from '@/components/Protected';
 import Navbar from '@/components/Navbar';
+import { AreaChart, Area, PieChart as RechartsPie, Pie, Cell, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 interface AppliedJob {
   id: string;
@@ -36,6 +37,11 @@ const STATUS_OPTIONS = [
     value: 'Got Call Back', 
     color: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border-green-300 dark:border-green-700', 
     icon: Phone 
+  },
+  { 
+    value: 'Received Offer', 
+    color: 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border-purple-300 dark:border-purple-700', 
+    icon: Trophy 
   },
   { 
     value: 'Rejected', 
@@ -311,6 +317,59 @@ export default function AppliedJobs() {
   
   const statusCounts = getStatusCounts();
 
+  // Prepare data for Jobs Applied Per Day chart
+  const getJobsPerDayData = () => {
+    if (jobs.length === 0) return [];
+
+    // Get all unique dates and count jobs per date
+    const dateCounts: { [key: string]: number } = {};
+    jobs.forEach(job => {
+      const date = new Date(job.appliedDate).toISOString().split('T')[0];
+      dateCounts[date] = (dateCounts[date] || 0) + 1;
+    });
+
+    // Get date range (last 30 days or all dates if less)
+    const dates = Object.keys(dateCounts).sort();
+    const startDate = new Date(dates[0]);
+    const endDate = new Date();
+    
+    // Fill in missing dates with 0
+    const result: { date: string; applications: number; displayDate: string }[] = [];
+    const currentDate = new Date(startDate);
+    
+    while (currentDate <= endDate) {
+      const dateStr = currentDate.toISOString().split('T')[0];
+      const displayDate = currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      result.push({
+        date: dateStr,
+        applications: dateCounts[dateStr] || 0,
+        displayDate
+      });
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    // Return last 30 days
+    return result.slice(-30);
+  };
+
+  // Prepare data for Jobs by Status chart
+  const getJobsByStatusData = () => {
+    const data = STATUS_OPTIONS.map(option => ({
+      name: option.value,
+      value: jobs.filter(job => job.status === option.value).length,
+      color: option.value === 'Applied' ? '#3b82f6' :
+             option.value === 'In Progress' ? '#eab308' :
+             option.value === 'Got Call Back' ? '#22c55e' :
+             option.value === 'Received Offer' ? '#a855f7' :
+             '#ef4444'
+    })).filter(item => item.value > 0);
+
+    return data;
+  };
+
+  const jobsPerDayData = getJobsPerDayData();
+  const jobsByStatusData = getJobsByStatusData();
+
   if (loading) {
     return (
       <Protected>
@@ -429,6 +488,204 @@ export default function AppliedJobs() {
           </div>
 
         </div>
+
+        {/* Analytics Charts Section */}
+        {jobs.length > 0 && (
+          <div className="mb-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Jobs Applied Per Day Chart */}
+            <div className="bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/50 dark:from-gray-800 dark:via-blue-950/20 dark:to-indigo-950/30 rounded-2xl border border-blue-200/50 dark:border-blue-800/30 shadow-xl hover:shadow-2xl transition-all duration-300 p-6 backdrop-blur-sm">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 dark:from-blue-600 dark:to-indigo-700 rounded-xl shadow-lg">
+                  <BarChart3 className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent">
+                    Application Trend
+                  </h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                    Jobs applied per day (Last 30 days)
+                  </p>
+                </div>
+              </div>
+              <ResponsiveContainer width="100%" height={300}>
+                <AreaChart 
+                  data={jobsPerDayData}
+                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                >
+                  <defs>
+                    <linearGradient id="colorApplications" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#6366f1" stopOpacity={0.9}/>
+                      <stop offset="50%" stopColor="#8b5cf6" stopOpacity={0.6}/>
+                      <stop offset="100%" stopColor="#ec4899" stopOpacity={0.1}/>
+                    </linearGradient>
+                    <filter id="glow">
+                      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                      <feMerge>
+                        <feMergeNode in="coloredBlur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                      </feMerge>
+                    </filter>
+                  </defs>
+                  <XAxis 
+                    dataKey="displayDate" 
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: '#9ca3af', fontSize: 11, fontWeight: 500 }}
+                    angle={-35}
+                    textAnchor="end"
+                    height={60}
+                    interval="preserveStartEnd"
+                  />
+                  <YAxis 
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: '#9ca3af', fontSize: 11, fontWeight: 500 }}
+                    domain={[0, 'auto']}
+                  />
+                  <Tooltip 
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        return (
+                          <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border border-blue-200 dark:border-blue-800 rounded-xl shadow-2xl p-4">
+                            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                              {payload[0].payload.displayDate}
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <div className="w-3 h-3 rounded-full bg-gradient-to-r from-indigo-500 to-pink-500"></div>
+                              <p className="text-lg font-bold bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent">
+                                {payload[0].value} {payload[0].value === 1 ? 'application' : 'applications'}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="applications" 
+                    stroke="url(#colorApplications)"
+                    strokeWidth={3}
+                    fillOpacity={1} 
+                    fill="url(#colorApplications)"
+                    name="Applications"
+                    animationDuration={1500}
+                    animationEasing="ease-in-out"
+                    dot={{ 
+                      fill: '#6366f1', 
+                      strokeWidth: 2, 
+                      r: 4,
+                      stroke: '#fff'
+                    }}
+                    activeDot={{ 
+                      r: 6, 
+                      fill: '#6366f1',
+                      stroke: '#fff',
+                      strokeWidth: 2,
+                      filter: 'url(#glow)'
+                    }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Jobs by Status Chart */}
+            <div className="bg-gradient-to-br from-white via-violet-50/30 to-purple-50/50 dark:from-gray-800 dark:via-violet-950/20 dark:to-purple-950/30 rounded-2xl border border-violet-200/50 dark:border-violet-800/30 shadow-xl hover:shadow-2xl transition-all duration-300 p-6 backdrop-blur-sm">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-3 bg-gradient-to-br from-violet-500 to-purple-600 dark:from-violet-600 dark:to-purple-700 rounded-xl shadow-lg">
+                  <PieChart className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 dark:from-violet-400 dark:to-purple-400 bg-clip-text text-transparent">
+                    Status Distribution
+                  </h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                    Breakdown by application status
+                  </p>
+                </div>
+              </div>
+              {jobsByStatusData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <RechartsPie>
+                    <defs>
+                      <filter id="shadow">
+                        <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.3"/>
+                      </filter>
+                    </defs>
+                    <Pie
+                      data={jobsByStatusData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => percent > 0.05 ? `${name}: ${(percent * 100).toFixed(0)}%` : ''}
+                      outerRadius={100}
+                      innerRadius={60}
+                      fill="#8884d8"
+                      dataKey="value"
+                      animationBegin={0}
+                      animationDuration={1200}
+                      animationEasing="ease-out"
+                      style={{ filter: 'url(#shadow)' }}
+                    >
+                      {jobsByStatusData.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={entry.color}
+                          strokeWidth={2}
+                          stroke="#fff"
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const data = payload[0];
+                          return (
+                            <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border border-violet-200 dark:border-violet-800 rounded-xl shadow-2xl p-4">
+                              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                                {data.name}
+                              </p>
+                              <div className="flex items-center gap-2">
+                                <div 
+                                  className="w-3 h-3 rounded-full" 
+                                  style={{ backgroundColor: data.payload.color }}
+                                ></div>
+                                <p className="text-lg font-bold bg-gradient-to-r from-violet-600 to-purple-600 dark:from-violet-400 dark:to-purple-400 bg-clip-text text-transparent">
+                                  {data.value} {data.value === 1 ? 'job' : 'jobs'}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Legend 
+                      verticalAlign="bottom"
+                      height={36}
+                      iconType="circle"
+                      wrapperStyle={{
+                        paddingTop: '20px',
+                        fontSize: '13px',
+                        fontWeight: 500
+                      }}
+                    />
+                  </RechartsPie>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[300px] flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-gradient-to-br from-violet-100 to-purple-100 dark:from-violet-900/20 dark:to-purple-900/20 flex items-center justify-center">
+                      <PieChart className="w-8 h-8 text-violet-400 dark:text-violet-500" />
+                    </div>
+                    <p className="text-gray-500 dark:text-gray-400 font-medium">No data to display</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Header */}
         <div className="mb-8">
