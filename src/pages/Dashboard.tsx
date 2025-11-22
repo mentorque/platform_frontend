@@ -389,9 +389,9 @@ export default function Dashboard() {
                 providing personalized guidance throughout your journey to ensure your success feels unique to you.
               </p>
             </div>
-            <div className="grid md:grid-cols-2 gap-8">
+            <div className="flex justify-center">
               {/* Anchita Basumtary */}
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200 dark:border-blue-700 p-8 hover:shadow-lg transition-all duration-300">
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200 dark:border-blue-700 p-8 hover:shadow-lg transition-all duration-300 max-w-md">
                 <div className="text-center">
                   <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
                     <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">AB</span>
@@ -409,31 +409,6 @@ export default function Dashboard() {
                       <span className="text-sm text-gray-500 dark:text-gray-400">📞</span>
                       <a href="tel:+353892025448" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium">
                         +353 89 202 5448
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Gaurav Agarwal */}
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl border border-green-200 dark:border-green-700 p-8 hover:shadow-lg transition-all duration-300">
-                <div className="text-center">
-                  <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <span className="text-2xl font-bold text-green-600 dark:text-green-400">GA</span>
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Gaurav Agarwal</h3>
-                  <p className="text-gray-600 dark:text-gray-300 mb-4">Student Success Manager</p>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-center gap-2">
-                      <span className="text-sm text-gray-500 dark:text-gray-400">📧</span>
-                      <a href="mailto:info@mentorquedu.com" className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 font-medium">
-                        info@mentorquedu.com
-                      </a>
-                    </div>
-                    <div className="flex items-center justify-center gap-2">
-                      <span className="text-sm text-gray-500 dark:text-gray-400">📞</span>
-                      <a href="tel:+918822940004" className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 font-medium">
-                        +91 88229 40004
                       </a>
                     </div>
                   </div>

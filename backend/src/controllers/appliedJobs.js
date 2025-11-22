@@ -67,9 +67,9 @@ const createAppliedJob = async (req, res) => {
     const userId = user.id;
 
     // Validate required fields
-    if (!id || !title || !url) {
+    if (!id || !title) {
       return res.status(400).json({ 
-        error: 'Missing required fields: id, title, and url are required' 
+        error: 'Missing required fields: id and title are required' 
       });
     }
 
@@ -83,7 +83,7 @@ const createAppliedJob = async (req, res) => {
         title,
         company: company || null,
         location: location || null,
-        url,
+        url: url || '#',
         appliedText: appliedText || null,
         appliedDate: appliedDate ? new Date(appliedDate) : new Date(),
         status: status || 'Applied',

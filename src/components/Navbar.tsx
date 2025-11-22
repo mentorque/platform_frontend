@@ -36,11 +36,8 @@ export default function Navbar() {
             <nav className="hidden md:flex items-center gap-8 text-gray-800 dark:text-gray-200 font-medium">
               <a className="hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200 drop-shadow-sm" href="/">Home</a>
               <a className="hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200 drop-shadow-sm" href="/progress">Progress</a>
-              <a className="hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200 drop-shadow-sm" href="/dashboard">Dashboard</a>
               <a className="hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200 drop-shadow-sm" href="/applied-jobs">Applied Jobs</a>
               <a className="hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200 drop-shadow-sm" href="/api-keys">API Keys</a>
-              <a className="hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200 drop-shadow-sm" href="/about">About</a>
-              <a className="hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200 drop-shadow-sm" href="/services">Services</a>
             </nav>
 
             {/* Desktop CTA Button and Controls */}
@@ -105,13 +102,6 @@ export default function Navbar() {
                   </a>
                   <a 
                     className="text-gray-800 dark:text-gray-200 font-medium hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200 py-3 px-4 rounded-lg hover:bg-white/10 dark:hover:bg-gray-800/20 text-base" 
-                    href="/dashboard"
-                    onClick={closeMobileMenu}
-                  >
-                    Dashboard
-                  </a>
-                  <a 
-                    className="text-gray-800 dark:text-gray-200 font-medium hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200 py-3 px-4 rounded-lg hover:bg-white/10 dark:hover:bg-gray-800/20 text-base" 
                     href="/applied-jobs"
                     onClick={closeMobileMenu}
                   >
@@ -123,20 +113,6 @@ export default function Navbar() {
                     onClick={closeMobileMenu}
                   >
                     API Keys
-                  </a>
-                  <a 
-                    className="text-gray-800 dark:text-gray-200 font-medium hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200 py-3 px-4 rounded-lg hover:bg-white/10 dark:hover:bg-gray-800/20 text-base" 
-                    href="/about"
-                    onClick={closeMobileMenu}
-                  >
-                    About
-                  </a>
-                  <a 
-                    className="text-gray-800 dark:text-gray-200 font-medium hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200 py-3 px-4 rounded-lg hover:bg-white/10 dark:hover:bg-gray-800/20 text-base" 
-                    href="/services"
-                    onClick={closeMobileMenu}
-                  >
-                    Services
                   </a>
                 </div>
 
