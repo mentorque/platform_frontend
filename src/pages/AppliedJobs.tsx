@@ -67,12 +67,19 @@ export default function AppliedJobs() {
   const [submitting, setSubmitting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [jobsPerPage] = useState(10);
+  const [goalPerDay, setGoalPerDay] = useState<number>(3);
+  const [editingGoal, setEditingGoal] = useState(false);
+  const [tempGoal, setTempGoal] = useState<number>(3);
+  const [updatingGoal, setUpdatingGoal] = useState(false);
   const auth = getAuth();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        await fetchAppliedJobs(user);
+        await Promise.all([
+          fetchAppliedJobs(user),
+          fetchDailyGoal(user)
+        ]);
       } else {
         setLoading(false);
       }
@@ -80,6 +87,75 @@ export default function AppliedJobs() {
 
     return () => unsubscribe();
   }, []);
+
+  const fetchDailyGoal = async (user?: any) => {
+    try {
+      const currentUser = user || auth.currentUser;
+      if (!currentUser) return;
+
+      const token = await currentUser.getIdToken();
+      const response = await fetch(`${API_URL}/api/applied-jobs/goal`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch daily goal');
+      }
+
+      const data = await response.json();
+      setGoalPerDay(data.goalPerDay || 3);
+      setTempGoal(data.goalPerDay || 3);
+    } catch (error: any) {
+      console.error('Error fetching daily goal:', error);
+      // Use default value of 3 if fetch fails
+      setGoalPerDay(3);
+      setTempGoal(3);
+    }
+  };
+
+  const updateDailyGoal = async () => {
+    if (tempGoal < 1 || tempGoal > 100) {
+      toast.error('Goal must be between 1 and 100');
+      return;
+    }
+
+    setUpdatingGoal(true);
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) {
+        toast.error('Not authenticated');
+        setUpdatingGoal(false);
+        return;
+      }
+
+      const response = await fetch(`${API_URL}/api/applied-jobs/goal`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ goalPerDay: tempGoal })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update goal');
+      }
+
+      const data = await response.json();
+      setGoalPerDay(data.goalPerDay);
+      setEditingGoal(false);
+      toast.success('Daily goal updated successfully');
+    } catch (error: any) {
+      console.error('Error updating daily goal:', error);
+      toast.error(error.message || 'Failed to update daily goal');
+      setTempGoal(goalPerDay); // Revert on error
+    } finally {
+      setUpdatingGoal(false);
+    }
+  };
 
   const fetchAppliedJobs = async (user?: any) => {
     try {
@@ -274,7 +350,7 @@ export default function AppliedJobs() {
   };
 
   const calculateStreak = () => {
-    if (jobs.length === 0) return { currentStreak: 0, todayCount: 0, needToday: 3 };
+    if (jobs.length === 0) return { currentStreak: 0, todayCount: 0, needToday: goalPerDay };
 
     // Group jobs by date
     const jobsByDate: { [key: string]: number } = {};
@@ -287,7 +363,7 @@ export default function AppliedJobs() {
     const today = new Date().toDateString();
     const todayCount = jobsByDate[today] || 0;
 
-    // Calculate streak
+    // Calculate streak using user-defined goal
     let streak = 0;
     let currentDate = new Date();
     
@@ -295,7 +371,7 @@ export default function AppliedJobs() {
       const dateStr = currentDate.toDateString();
       const count = jobsByDate[dateStr] || 0;
       
-      if (count >= 3) {
+      if (count >= goalPerDay) {
         streak++;
         currentDate.setDate(currentDate.getDate() - 1);
       } else if (dateStr === today && count > 0) {
@@ -309,7 +385,7 @@ export default function AppliedJobs() {
     return {
       currentStreak: streak,
       todayCount,
-      needToday: Math.max(0, 3 - todayCount)
+      needToday: Math.max(0, goalPerDay - todayCount)
     };
   };
 
@@ -412,8 +488,68 @@ export default function AppliedJobs() {
                   <Target className="w-8 h-8 text-white" />
                 </div>
                 <div>
-                  <div className="text-3xl font-bold text-slate-900 dark:text-slate-100">
-                    {streakData.todayCount}
+                  <div className="flex items-center gap-2">
+                    <div className="text-3xl font-bold text-slate-900 dark:text-slate-100">
+                      {streakData.todayCount}
+                    </div>
+                    <div className="text-xl font-semibold text-slate-500 dark:text-slate-400">
+                      / {goalPerDay}
+                    </div>
+                    {!editingGoal && (
+                      <button
+                        onClick={() => {
+                          setEditingGoal(true);
+                          setTempGoal(goalPerDay);
+                        }}
+                        className="ml-2 p-1.5 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded transition-colors"
+                        title="Edit daily goal"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                    )}
+                    {editingGoal && (
+                      <div className="flex items-center gap-2 ml-2">
+                        <input
+                          type="number"
+                          min="1"
+                          max="100"
+                          value={tempGoal}
+                          onChange={(e) => setTempGoal(parseInt(e.target.value) || 1)}
+                          className="w-16 px-2 py-1 text-lg font-semibold border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-gray-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              updateDailyGoal();
+                            } else if (e.key === 'Escape') {
+                              setEditingGoal(false);
+                              setTempGoal(goalPerDay);
+                            }
+                          }}
+                        />
+                        <button
+                          onClick={updateDailyGoal}
+                          disabled={updatingGoal}
+                          className="p-1.5 text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/20 rounded transition-colors"
+                          title="Save goal"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingGoal(false);
+                            setTempGoal(goalPerDay);
+                          }}
+                          className="p-1.5 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                          title="Cancel"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                   <div className="text-sm font-semibold text-slate-600 dark:text-slate-400">
                     Today's Applications
@@ -461,9 +597,9 @@ export default function AppliedJobs() {
               </div>
             </div>
 
-            {/* Status Message */}
+            {/* Status Message & Goal Editor */}
             <div className="text-right">
-              {streakData.todayCount >= 3 ? (
+              {streakData.todayCount >= goalPerDay ? (
                 <div className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-green-500 to-emerald-500 dark:from-green-600 dark:to-emerald-600 text-white rounded-xl shadow-md">
                   <Zap className="w-5 h-5" />
                   <span className="font-bold">Daily Goal Complete</span>
@@ -482,7 +618,7 @@ export default function AppliedJobs() {
             <div className="h-2.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden shadow-inner">
               <div 
                 className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500 dark:from-blue-600 dark:via-indigo-600 dark:to-violet-600 transition-all duration-500 shadow-sm"
-                style={{ width: `${Math.min((streakData.todayCount / 3) * 100, 100)}%` }}
+                style={{ width: `${Math.min((streakData.todayCount / goalPerDay) * 100, 100)}%` }}
               ></div>
             </div>
           </div>

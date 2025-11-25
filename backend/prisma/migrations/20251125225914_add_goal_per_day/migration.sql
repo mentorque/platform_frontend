@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN "goalPerDay" INTEGER NOT NULL DEFAULT 3;
+

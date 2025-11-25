@@ -4,7 +4,9 @@ const {
   getAppliedJobs, 
   createAppliedJob, 
   updateJobStatus, 
-  deleteAppliedJob 
+  deleteAppliedJob,
+  getDailyGoal,
+  updateDailyGoal
 } = require('../controllers/appliedJobs');
 const { verifyFirebaseToken } = require('../utils/firebaseAdmin');
 
@@ -22,6 +24,12 @@ router.patch('/applied-jobs/:jobId/status', updateJobStatus);
 
 // DELETE /api/applied-jobs/:jobId - Delete applied job
 router.delete('/applied-jobs/:jobId', deleteAppliedJob);
+
+// GET /api/applied-jobs/goal - Get daily goal
+router.get('/applied-jobs/goal', getDailyGoal);
+
+// PATCH /api/applied-jobs/goal - Update daily goal
+router.patch('/applied-jobs/goal', updateDailyGoal);
 
 module.exports = router;
 

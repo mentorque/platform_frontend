@@ -73,6 +73,16 @@ const createAppliedJob = async (req, res) => {
       });
     }
 
+    // Validate status if provided
+    if (status) {
+      const validStatuses = ['Applied', 'In Progress', 'Got Call Back', 'Received Offer', 'Rejected'];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ 
+          error: 'Invalid status. Must be one of: Applied, In Progress, Got Call Back, Received Offer, Rejected' 
+        });
+      }
+    }
+
     // Note: Removed duplicate URL check to allow manual entries with same URLs
 
     // Create the applied job
@@ -114,11 +124,11 @@ const updateJobStatus = async (req, res) => {
     console.log('📝 Update job status request:', { firebaseUid: uid, dbUserId: userId, jobId, status });
 
     // Validate status
-    const validStatuses = ['Applied', 'In Progress', 'Got Call Back', 'Rejected'];
+    const validStatuses = ['Applied', 'In Progress', 'Got Call Back', 'Received Offer', 'Rejected'];
     if (!validStatuses.includes(status)) {
       console.log('❌ Invalid status:', status);
       return res.status(400).json({ 
-        error: 'Invalid status. Must be one of: Applied, In Progress, Got Call Back, Rejected' 
+        error: 'Invalid status. Must be one of: Applied, In Progress, Got Call Back, Received Offer, Rejected' 
       });
     }
 
@@ -199,10 +209,61 @@ const deleteAppliedJob = async (req, res) => {
   }
 };
 
+// Get daily goal for user
+const getDailyGoal = async (req, res) => {
+  try {
+    const { uid, email } = req.user;
+
+    // Get or create user in database
+    const user = await getOrCreateUser(uid, email);
+
+    res.json({ goalPerDay: user.goalPerDay || 3 });
+  } catch (error) {
+    console.error('Error fetching daily goal:', error);
+    res.status(500).json({ error: 'Failed to fetch daily goal' });
+  }
+};
+
+// Update daily goal for user
+const updateDailyGoal = async (req, res) => {
+  try {
+    const { uid, email } = req.user;
+    const { goalPerDay } = req.body;
+
+    // Validate goal
+    if (goalPerDay === undefined || goalPerDay === null) {
+      return res.status(400).json({ error: 'goalPerDay is required' });
+    }
+
+    const goal = parseInt(goalPerDay);
+    if (isNaN(goal) || goal < 1 || goal > 100) {
+      return res.status(400).json({ 
+        error: 'goalPerDay must be a number between 1 and 100' 
+      });
+    }
+
+    // Get or create user in database
+    const user = await getOrCreateUser(uid, email);
+
+    // Update the goal
+    const updatedUser = await prisma.user.update({
+      where: { id: user.id },
+      data: { goalPerDay: goal }
+    });
+
+    res.json({ goalPerDay: updatedUser.goalPerDay });
+  } catch (error) {
+    console.error('Error updating daily goal:', error);
+    res.status(500).json({ error: 'Failed to update daily goal' });
+  }
+};
+
 module.exports = {
   getAppliedJobs,
   createAppliedJob,
   updateJobStatus,
-  deleteAppliedJob
+  deleteAppliedJob,
+  getDailyGoal,
+  updateDailyGoal
 };
 
